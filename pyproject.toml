@@ -22,12 +22,20 @@ dev = [
   "pre-commit>=4.6",
 ]
 
+[project.scripts]
+radio = "radio.cli:main"
+
+# A GUI-subsystem launcher: the picker window with no console behind it.
+[project.gui-scripts]
+radio-gui = "radio.gui.app:main"
+
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["radio*"]
 
 [tool.pytest.ini_options]
 # `testpaths` is what keeps `scripts/hooks/tests/` out of the application suite —
@@ -36,8 +44,13 @@ testpaths = ["tests/"]
 # No `-q` in `addopts`: an agent adds its own, and `-qq` drops the "N passed" line.
 # `-p devkit_temproot` is the vendored plugin giving each run a temp root of its own, so a
 # run elsewhere on the machine cannot fail this one at exit; `pythonpath` is where it lives.
-addopts = "-p devkit_temproot"
+# `local` is deselected here and selected by `scripts/e2e.py`, nightly, on this PC: those
+# tests open tkinter windows, and a CI runner has no display.
+addopts = '-m "not local" -p devkit_temproot'
 pythonpath = ["scripts/pytest-plugins"]
+markers = [
+  "local: needs this workstation, not a runner; deselected by addopts, run nightly by scripts/e2e.py",
+]
 
 [tool.mypy]
 python_version = "3.12"

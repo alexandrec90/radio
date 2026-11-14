@@ -47,8 +47,12 @@ ignore = ["E101", "E401", "E501", "E701", "E702", "E703", "E731", "E741", "E742"
 # same subprocess allowances as `scripts/**`. These arrive vendored
 # from devkit, so this line must stay in step with devkit's own ruff.toml.
 ".claude/skills/**/*.py" = ["S603", "S607", "S310"]
-# Tests: asserts (S101) and hardcoded test passwords (S105).
-"tests/**/*.py" = ["S101", "S105"]
+# The app itself: launching mpv / streamlink / yt-dlp is its whole job (argument lists,
+# never a shell), and it fetches only fixed https endpoints (Twitch GQL, youtube.com).
+"radio/**/*.py" = ["S603", "S310"]
+# Tests: asserts (S101) and hardcoded test passwords (S105), and fake tokens passed as
+# arguments (S106).
+"tests/**/*.py" = ["S101", "S105", "S106"]
 "scripts/hooks/tests/**/*.py" = ["S101", "S105"]
 
 [format]
