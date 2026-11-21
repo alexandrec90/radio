@@ -2,24 +2,38 @@
 
 Audio-only Twitch / YouTube radio: mpv + yt-dlp + streamlink with a tkinter picker
 
+**The repository names no game, publisher or store**, in code, tests, docs or commit
+messages; it stays generic. Example data in tests uses neutral names.
+
 ## Tech Stack
 
 | Layer | Choice |
 | --- | --- |
-| Language | Python 3.12 |
-| Tests | pytest |
-| Lint | ruff |
+| Language | Python 3.12, standard library only at runtime |
+| UI | tkinter (`radio/gui/`) |
+| External programs | mpv, yt-dlp, streamlink, found by `radio/tools.py` |
+| Tests | pytest; the `local` tier (`scripts/e2e.py`) opens real windows |
+| Lint | ruff, mypy |
 
-## Environment Variables
+No Docker stack and no `.env`: nothing here publishes a port.
 
-See `.env.example` for every variable. `.env` is gitignored and holds this
-checkout's ports and credentials.
+## Things the code cannot tell you
+
+- **User state is outside the checkout**: `%APPDATA%/radio/radio.json` (`radio/config.py`),
+  so a re-clone or a second checkout keeps favorites and the Twitch login. `RADIO_CONFIG`
+  overrides the path; every test points it into `tmp_path`.
+- **The Twitch token is DPAPI-sealed** for the Windows user (`radio/secret_store.py`). A
+  config copied to another user or PC cannot unseal it, and the app drops it and asks to
+  reconnect rather than failing.
+- **Twitch's follow list needs the user's own `auth-token` cookie**; public follow lists
+  are gone. The GraphQL client id in `radio/twitch.py` is Twitch's public web one.
+- **A YouTube live check costs ~300 KB per channel** (the `/live` page), so it runs two at
+  a time and only on demand or every ten minutes while the filter is on. Keep it that
+  way: the app is meant to run beside a latency-sensitive game.
+- **`mpv.exe` is a GUI-subsystem program**: a shell does not wait for it and its keys do not
+  reach the terminal. The CLI uses `mpv.com` (`Tools.mpv_console`).
 
 ## Tooling
-
-> Everything in this section needs the local Docker Desktop daemon. If it isn't
-> running, make the code change and defer container/stack verification until it is
-> (or to CI). Run `docker ps` first — an `npipe`/daemon error means Desktop is stopped.
 
 ### Scripts and the vendored harness
 
@@ -54,10 +68,6 @@ terminal output — it scrolls away and buries the signal. Keep the terminal to 
 status line plus the artifact path; put everything needed to diagnose in the file.
 Write the artifact on failure too, not just success, and overwrite per run.
 
-### Docker subprocess calls
-
-- **`docker compose exec` must use `-T`** — without it a pseudo-TTY is allocated and
-  the subprocess handle can outlive the command, leaving the caller hung.
 
 ## Testing
 
@@ -68,6 +78,15 @@ and full runs in CI.
 Add this project's specifics *below* — fixtures, isolation rules, markers, what to mock
 and where — but do not restate the policy above. It is vendored and drift-gated; a copy
 here is a fork that will disagree with it the first time either is edited.
+
+- **No test touches the network, mpv or the real config.** Twitch and YouTube calls take an
+  injectable `query` / `opener` / `run`, or are monkeypatched at the module (`twitch.status`);
+  `Player` takes a fake `popen`; `conftest.FakePlayer` stands in for it in the GUI.
+- **`local` marks tests that open a tkinter window** (`tests/test_gui.py`). `addopts`
+  deselects them; `scripts/e2e.py` runs them. They share one session `Tk` root, emptied
+  after each test: a fresh `Tk()` per test fails intermittently on Windows.
+- **`App.drain()`** finishes all background work and applies it on the test's thread;
+  GUI tests call it instead of running a mainloop.
 
 ## Guardrails
 

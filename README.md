@@ -1,18 +1,58 @@
 # Radio
 
-Audio-only Twitch / YouTube radio: mpv + yt-dlp + streamlink with a tkinter picker
+Audio-only Twitch / YouTube radio: mpv + yt-dlp + streamlink with a tkinter picker.
+Background listening that never downloads video: about 30 MB an hour from YouTube,
+70 MB from Twitch.
 
 Generated from [devkit](https://github.com/alexandrec90/devkit)'s project
 template. The agent harness in `scripts/hooks/` is vendored from there — see
 `CLAUDE.md`, "Vendored agent harness".
 
-## Quick start
+## Install
 
 ```bash
-cp .env.example .env          # then fill in the placeholders
-uv sync --all-extras          # creates .venv from the committed uv.lock
-# no uv? pip install -e ".[dev]" works, but resolves fresh instead of from the lock
-pytest
+winget install shinchiro.mpv yt-dlp.yt-dlp Streamlink.Streamlink   # the three players/fetchers
+uv sync --all-extras                                               # .venv from uv.lock
+```
+
+The tools are found on `PATH` first, then at their usual winget install locations
+(`radio/tools.py`).
+
+## Use
+
+```bash
+.venv/Scripts/radio-gui          # the picker window (no console)
+.venv/Scripts/radio              # same window, from a terminal
+.venv/Scripts/radio tw           # rotate through live Twitch favorites, then follows
+.venv/Scripts/radio tw <name>    # one Twitch channel
+.venv/Scripts/radio yt <url> --shuffle   # a video, playlist or a channel's /videos
+.venv/Scripts/radio search lofi beats    # top 50 YouTube results, back to back
+```
+
+In a terminal, mpv's keys work: space pause, `<` `>` previous/next, `9` `0` volume, `q` quit
+(in a Twitch rotation, `q` skips to the next live channel).
+
+**The window.** The Twitch tab lists favorites (★, in your order) and, once you connect
+your account, the channels you follow (♥), with live status refreshed every two
+minutes. *Auto-switch* plays the next live channel when a stream ends. *Browse
+category* autocompletes Twitch category names. The YouTube tab searches (optionally
+live-only) and keeps saved channels; *Import subscriptions* reads a Google Takeout
+`subscriptions.csv` or a one-off `cookies.txt` export, and *Live only* there shows the
+channels streaming now.
+
+**Accounts.** Twitch hides follow lists from anyone not logged in as you, so *Connect
+Twitch account* takes the `auth-token` cookie from your browser. It is stored sealed
+with Windows DPAPI (`radio/secret_store.py`), readable only by your Windows account.
+
+**State** lives in `%APPDATA%/radio/radio.json`, outside the checkout, so a re-clone
+keeps it. `RADIO_CONFIG` points it elsewhere.
+
+## Develop
+
+```bash
+uv sync --all-extras
+pytest                     # everything a CI runner can do
+python scripts/e2e.py      # the `local` tier: opens real tkinter windows
 ```
 
 In VS Code, `Ctrl+Shift+B` runs the default build task and the task quick-pick
